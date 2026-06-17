@@ -5,12 +5,15 @@ Denisse Andres Zúñiga
 # preguntas 
 1. ¿Cuál es la diferencia entre usar una variable global y una cola para comunicar datos?
 Una variable global corre el riesgo de que muchas tareas simultáneas quieran escribir sobre esa variable cuando no está protegida por un mutex, y la cola es para hilos que gestiona el bloqueo y desbloqueo de las tareas,transfiriendo de manera ordenada los datos.
-  
-3. ¿Qué tarea queda bloqueada cuando espera datos de una cola?
-4. ¿Por qué TaskManager debe concentrar las decisiones del sistema?
+2. ¿Qué tarea queda bloqueada cuando espera datos de una cola?\
+Queda bloqueada la tarea que recibe en la función xQueueReceive(). Espera datos hasta que lleguen nuevos si es que está vacío.\
+3. ¿Por qué TaskManager debe concentrar las decisiones del sistema?\
+Para evitar condiciones de carrera y garantizar que el servo y el sensor trabajen con sincronía.
+4. ¿Por qué pvParameters es más flexible que crear una función distinta por tarea?\
+Porque se reutiliza el código, es como diseñar una plantilla y solamente la instancias para asignarle los valores o parámetros de los componentes similares que ocupas.\
 5. ¿Qué diferencia existe entre suspender una tarea y bloquearla esperando una cola?
-   Al suspender la tarea sale completamente de la planificación y no consumirá recursos, mientras que al bloquear la tarea entrará en pausa temporal esperando a que un evento suceda y el sistema operativo la despertará en cuanto el dato este disponible o si el tiempo expira.
-5. ¿Qué efecto tiene aumentar el tamaño de la ventana del filtro de mediana?
+Al suspender la tarea sale completamente de la planificación y no consumirá recursos, mientras que al bloquear la tarea entrará en pausa temporal esperando a que un evento suceda y el sistema operativo la despertará en cuanto el dato este disponible o si el tiempo expira.
+6. ¿Qué efecto tiene aumentar el tamaño de la ventana del filtro de mediana?
    Nos ayuda aumentando la robustez del sistema, para que cualquier ruido no interfiera con las variaciones en la luz.
 7. ¿Por qué un filtro de mediana rechaza picos mejor que un promedio simple?
    Por que al sumar todos los valores recibidos, con el promedio simple, habrá valores extremadamente altos o bajos, que alteren el resultado final. Mientras que en el filtro de mediana va a ordenar los valores de menor a mayor y tomará el valor central, y esto hace que los valores atípicos que nos arroje, no sean elegidos.
