@@ -13,9 +13,11 @@
 #endif
 
 //VARIABLES GLOBALES
+//banderas
 volatile bool g_ledRapido = true;
 volatile bool g_botonPres = false;
 volatile bool g_sensorActivo = false;
+//handles para suspender y reaundar las tareas
 TaskHandle_t xHandleLedRapido = NULL;
 TaskHandle_t xHandleLedLento = NULL;
 TaskHandle_t xHandleSensor = NULL;
@@ -25,13 +27,15 @@ volatile int contador = 0;
 #define ADC_CHANNEL ADC_CHANNEL_0
 adc_oneshot_unit_handle_t adc1_handle;
 
+// task para parpadeo rápido
 void TaskLedRapido(void *pvParameters) {
     gpio_reset_pin(32);
     gpio_set_direction(32, GPIO_MODE_OUTPUT); 
 
     while(1){
-        contador = 0;
+        contador = 0; //se reinicia el contador del modo lento
         if(g_botonPres == true){
+            //si se presiona el botón, se supende la tarea actual y reanuda modo lento y sensor
             vTaskResume(xHandleLedLento);
             vTaskResume(xHandleSensor);
             vTaskSuspend(NULL);
@@ -39,18 +43,20 @@ void TaskLedRapido(void *pvParameters) {
         }
     gpio_set_level(32, 1);
     printf("[LED_R]  ");
+        // parpadeo del led cada 100ms
     vTaskDelay(100 / portTICK_PERIOD_MS); 
     gpio_set_level(32, 0);
     vTaskDelay(100 / portTICK_PERIOD_MS); 
     }
 }
 
+//task de parpadeo lento
 void TaskLedLento(void *pvParameters) {
     vTaskSuspend(NULL); 
     while(1){
-        if(contador >= 5 || g_ledRapido == true){
-            if(contador >= 5){
-                printf("\n[LED_L] Timeout 5s -> regresando a modo RAPIDO\n");
+        if(contador >= 5 || g_ledRapido == true){ 
+            if(contador >= 5){ //se excede de 5 segundos se suspende la tarea actual y reanuda modo rápido
+                printf("[LED_L] Timeout 5s -> regresando a modo RAPIDO "); 
             }
             g_ledRapido = true;
             g_botonPres = false;
@@ -60,6 +66,7 @@ void TaskLedLento(void *pvParameters) {
         }
             gpio_set_level(32, 1);
             printf("[LED_L]  ");
+        //parpadeo cada 500ms
             vTaskDelay(500 / portTICK_PERIOD_MS); 
             gpio_set_level(32, 0);
             vTaskDelay(500 / portTICK_PERIOD_MS);
@@ -68,22 +75,22 @@ void TaskLedLento(void *pvParameters) {
 }
 
 void TaskMonitor(void *pvParameters) {
-    gpio_reset_pin(0);
+    gpio_reset_pin(0); //botón integrado de la placa
     gpio_set_direction(0, GPIO_MODE_INPUT);
     UBaseType_t uxTaskGetStackHighWaterMark( TaskHandle_t xTask );
     while(1)
     {
-        if(gpio_get_level(0) == 0){
+        if(gpio_get_level(0) == 0){ //verifica que se ha presionado el botón
             if (g_ledRapido == true){
-                printf("(usuario presiona boton) ");
+                printf(" (usuario presiona boton) ");
                 printf("BOTON PRESIONADO ");
-                printf("Boton detectado -> activando modo LENTO\n");
+                printf("Boton detectado -> activando modo LENTO  ");
                 g_botonPres = true;
                 g_ledRapido = false;
                 g_sensorActivo = true;
         } else {
-            printf("\n(usuario presiona boton) BOTON PRESIONADO \n");
-                printf("Boton detectado -> interrumpiendo y regresando a modo RAPIDO\n");
+            printf(" (usuario presiona boton) BOTON PRESIONADO ");
+                printf("Boton detectado -> interrumpiendo y regresando a modo RAPIDO  ");
                 g_ledRapido = true;
                 g_botonPres = false;
                 g_sensorActivo = false;
@@ -91,6 +98,7 @@ void TaskMonitor(void *pvParameters) {
         vTaskDelay(200 / portTICK_PERIOD_MS);
     }
 
+        //funciones para detectar stack overflows, monitoreo de memoria por cada tarea
         uint32_t free_heap = esp_get_free_heap_size();
         int StackRapido = uxTaskGetStackHighWaterMark(xHandleLedRapido);
         int StackLento = uxTaskGetStackHighWaterMark(xHandleLedLento);
@@ -123,21 +131,24 @@ void TaskSensor(void *pvParameters) {
  
     while(1)
     {   
+        //salir de esta tarea si el botón se presiona nuevamente o se excedieron los 5 segundos
         if(contador >= 5 || g_sensorActivo == false){
             g_sensorActivo = false;   
             vTaskSuspend(NULL);    
         }
-        voltaje = ((float)adc_raw /4095)*3.3;
+        
         adc_oneshot_read(adc1_handle, ADC_CHANNEL, &adc_raw);
+        voltaje = ((float)adc_raw /4095)*3.3;
         
         printf("[SENS] ADC raw: %d  v: %.2f\n", adc_raw, voltaje);
         vTaskDelay(300 / portTICK_PERIOD_MS);
     }
 }
 
+//cuando todas las tareas están blocked o suspended
 void vApplicationIdleHook(void) {
     static bool mensajeImpreso = false;
-    
+    //se imprime cuando termina la tarea de modo lento
     if (g_ledRapido == false && contador >= 4) {
         if (!mensajeImpreso) {
             printf("\n[IDLE] CPU libre esperando evento de boton\n");
@@ -149,6 +160,7 @@ void vApplicationIdleHook(void) {
 }
 void app_main(void)
 {
+    //creación de las tareas con la prioridad indicada a la práctica
     xTaskCreate(TaskLedRapido, "LED_R", 2048, NULL, 1, &xHandleLedRapido);
     xTaskCreate(TaskLedLento, "LED_L", 2048, NULL, 2, &xHandleLedLento);
     xTaskCreate(TaskSensor, "SENS", 2048, NULL, 3, &xHandleSensor);

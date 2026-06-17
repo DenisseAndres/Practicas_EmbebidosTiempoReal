@@ -1,4 +1,7 @@
-Descripción de la práctica
+# Integrantes del equipo
+María Fernanda Serrano Rodríguez\
+Denisse Andrés Zúñiga
+# Descripción de la práctica
 La práctica consiste en un contador BCD del 0 al 9, un botón de dirección que indica si el contador va en forma ascendente o descendente, y un botón que alterna la velocidad entre 500ms y 250ms. Además se utiliza un botón para iniciar y pausar el contador.
 Cuando el sistema está en pausa, no pueden haber cambios de velocidad ni de dirección, y cuando se reanude el sistema, el contador debe retomar donde se quedó.
 
