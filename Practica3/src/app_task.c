@@ -22,22 +22,31 @@ static TaskHandle_t h_manager;
 
 static LedTaskParams_t led_params[4] =
 {
-    /*TODO*/
+    { .gpio = LED_B0, .bit_position = 0, .name = "LED_B0" },
+    { .gpio = LED_B1, .bit_position = 1, .name = "LED_B1" },
+    { .gpio = LED_B2, .bit_position = 2, .name = "LED_B2" },
+    { .gpio = LED_B3, .bit_position = 3, .name = "LED_B3" }
 };
 
 static ButtonTaskParams_t btn_start =
 {
-    /*TODO*/
+    .gpio = BTN_START,
+    .name = 'S', 
+    .type = BUTTON_START_PAUSE
 };
 
 static ButtonTaskParams_t btn_dir =
 {
-    /*TODO*/
+    .gpio = BTN_DIR,
+    .name = 'D',
+    .type = BUTTON_DIRECTION
 };
 
 static ButtonTaskParams_t btn_speed =
 {
-    /*TODO*/
+    .gpio = BTN_SPEED,
+    .name = 'V',
+    .type = BUTTON_SPEED
 };
 
 static const char *state_to_string(eTaskState state)
@@ -45,7 +54,7 @@ static const char *state_to_string(eTaskState state)
     switch (state)
 {
         case eRunning:
-            return "SUSPENDED";
+            return "RUNNING";
 
         case eReady:
             return "READY";
@@ -54,7 +63,7 @@ static const char *state_to_string(eTaskState state)
             return "BLOCKED";
 
         case eSuspended:
-            return "RUNNING";
+            return "SUSPENDED";
 
         case eDeleted:
             return "DELETED";
@@ -68,6 +77,7 @@ static void manager_pause_system(void)
 {
     g_system.mode = SYSTEM_PAUSED;
 
+        
     /*
        Se suspende el contador:
        - conserva su valor actual
@@ -75,11 +85,14 @@ static void manager_pause_system(void)
        - NO regresa solo; necesita vTaskResume()
     */
     /*TODO*/
+    vTaskSuspend(h_counter);
 
     /*
        Se suspenden botones que NO deben funcionar en pausa.
        Solo queda activo START/PAUSE.
     */
+    vTaskSuspend(h_btn_dir);
+    vTaskSuspend(h_btn_speed);
     
 	/*TODO*/
 
@@ -112,7 +125,7 @@ static void manager_toggle_direction(void)
     }
     else
     {
-        g_system.direction = COUNT_DOWN;
+        g_system.direction = COUNT_UP;
     }
 
     ESP_LOGI(TAG,"Nueva direccion: %s",g_system.direction == COUNT_UP ? "UP" : "DOWN");
@@ -126,7 +139,7 @@ static void manager_toggle_speed(void)
     }
     else
     {
-        g_system.period_ms = SPEED_FAST_MS;
+        g_system.period_ms = SPEED_SLOW_MS;
     }
 
     ESP_LOGI(TAG,"Nueva velocidad: %lu ms",(unsigned long)g_system.period_ms);
@@ -165,11 +178,11 @@ static void task_manager(void *pvParameters)
 
     while (1)
     {
-        ManagerEvent_t events;
+        ManagerEvent_t event;
 
-        events = g_system.pending_event;
+        event = g_system.pending_event;
 
-        if (events != MANAGER_EVENT_NONE)
+        if (event != MANAGER_EVENT_NONE)
         {
             /*
                Consumimos el evento.
@@ -178,21 +191,21 @@ static void task_manager(void *pvParameters)
             */
             g_system.pending_event = MANAGER_EVENT_NONE;
 
-            switch (events)
+            switch (event)
             {
                 case MANAGER_EVENT_SPEED:
                     if (g_system.mode == SYSTEM_RUNNING)
                     {
-                        manager_run_system();
+                        manager_toggle_speed();
                     }
                     else
                     {
-                        manager_run_system();
+                        ESP_LOGW(TAG, "Velocidad ignorada: sistema pausado");
                     }
                     break;
 
                 case MANAGER_EVENT_DIRECTION:
-                    if (g_system.mode == SYSTEM_RUNNING)
+                    if(g_system.mode == SYSTEM_RUNNING)
                     {
                         manager_toggle_direction();
                     }
@@ -200,16 +213,17 @@ static void task_manager(void *pvParameters)
                     {
                         ESP_LOGW(TAG,"Direccion ignorada: sistema pausado");
                     }
+                    break;
                     
 
                 case MANAGER_EVENT_START_PAUSE:
                     if (g_system.mode == SYSTEM_RUNNING)
                     {
-                        manager_toggle_speed();
+                        manager_pause_system();
                     }
                     else
                     {
-                        ESP_LOGW(TAG,"Velocidad ignorada: sistema pausado");
+                        manager_run_system();
                     }
                     break;
 
@@ -227,7 +241,7 @@ static void task_manager(void *pvParameters)
             manager_print_states();
         }
 
-        vTaskDelay(pdMS_TO_TICKS(20000));
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
@@ -235,9 +249,20 @@ void app_tasks_create(void)
 {
     
 	/* TODO --> Creación de tareas */
-	
-	
+	// Crear tareas
+    xTaskCreate(task_manager, "TaskManager", 3072, NULL, 4, &h_manager);
+    xTaskCreate(counter_task, "CounterTask", 2048, NULL, 2, &h_counter);
+    for(int i= 0; i<4; i++)
+    {
+       char led_task_name[16];
+        snprintf(led_task_name, sizeof(led_task_name), "LedTask_%d", i);
 
+        xTaskCreate(led_task, led_task_name, 2048, &led_params[i], 2, &h_leds[i]); 
+    }
+	
+    xTaskCreate(button_task,"BtnStartTask",2048, &btn_start, 3, &h_btn_start);
+    xTaskCreate(button_task,"BtnSpeedTask", 2048, &btn_speed, 3, &h_btn_speed);
+    xTaskCreate(button_task, "BtnDirTask", 2048, &btn_dir, 3, &h_btn_dir);
     /*
        Estado inicial:
        - contador pausado
