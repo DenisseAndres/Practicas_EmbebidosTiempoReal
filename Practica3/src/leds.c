@@ -6,6 +6,7 @@
 
 #include "driver/gpio.h"
 
+//tarea para un solo led y despues se instancia por cada led que se necesita
 void led_task(void *pvParameters)
 {
     LedTaskParams_t *cfg = (LedTaskParams_t *)pvParameters;
@@ -18,7 +19,9 @@ void led_task(void *pvParameters)
     {
         uint8_t bit_value;
 
-		
+		//para extraer el bit correspondiende, g_system value contiene el numero
+        /*decimal, entonces los bits se pasan a la derecha cierta cantidad de posiciones
+        poniendo el bit de interés como menos significativo*/
         bit_value = (g_system.value >> cfg->bit_position) & 0x01;
 
 		/*TODO --> Después de actualizar el valor de bit_value, enviar a gpio*/

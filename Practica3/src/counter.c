@@ -8,6 +8,7 @@
 
 static const char *TAG = "COUNTER";
 
+// modificar el valor actual del contador que va de 0 a 9
 static void counter_step(void)
 {
 	/*TODO --> Si g_system.direction = COUNT_UP entonces g_system.value incrementa su valor*/
@@ -34,9 +35,10 @@ static void counter_step(void)
     }
 }
 
+//tarea para imrpimir el estado actual y avanzar el contador
 void counter_task(void *pvParameters)
 {
-    (void)pvParameters;
+    (void)pvParameters; //silencia la advertencia del compilador por parámetro no utilizado
 
     while (1)
     {
