@@ -30,8 +30,8 @@ vTaskDelayUnit() se podría utilizar en la tarea del sensor porque adquirimos da
 
 - ¿Por que vTaskLedRapido tiene prioridad menor que vTaskMonitor? Describe que ocurriria si
 se invirtieran esas prioridades.\
-Porque como TaskMonitor se encarga de leer el estado del botón, tiene que hacerlo como prioridad por si el usuario sí presiona el botón, 
-
+Porque como TaskMonitor se encarga de leer el estado del botón, tiene que hacerlo como prioridad por si el usuario sí presiona el botón, se tiene que interrumpir cualquier tarea, pues si tiene invertida la prioridad, al sistema no le importaría si se presiona el botón y solo atendería la tarea del parpadeo del LED.
 
 - ¿Que riesgo existe al leer una variable volatile desde dos tareas distintas sin proteccion?
 Investiga el concepto de seccion critica.
+Existe el riesgo que se lea un valor desactualizado, o escriba sobre un valor que se modificó anteriormente, que no se haya reiniciado su valor para que pueda ejecutarse completamente el código, como un contador, que en vez de que inicie en 0 inicie en 5, después en 10, y así sucesivamente.
